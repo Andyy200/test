@@ -13,7 +13,7 @@ if CAMERA_AVAILABLE:
     model = YOLO('yolov10n.pt')  # Replace with the actual path to the YOLOv10 model
 
     # Video capture setup (0 for webcam)
-    cap = cv2.VideoCapture(0)
+    cap = cv2.vide9capturr(0)
 
     def generate_frames():
         while True:
