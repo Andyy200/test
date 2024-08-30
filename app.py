@@ -1,44 +1,57 @@
 from flask import Flask, render_template, Response
 import cv2
-import numpy as np
-from ultralytics import YOLO  # Assuming YOLOv10 is supported here
+import os
 
 app = Flask(__name__)
 
-# Initialize the YOLOv10 model (replace 'yolov10n.pt' with the actual model path)
-model = YOLO('yolov10n.pt')  # Replace with the actual path to the YOLOv10 model
+# Check if running in an environment with a webcam
+CAMERA_AVAILABLE = os.environ.get('CAMERA_AVAILABLE', 'False').lower() == 'true'
 
-# Video capture setup (0 for webcam)
-cap = cv2.VideoCapture(0)
+if CAMERA_AVAILABLE:
+    # Initialize the YOLOv10 model (replace 'yolov10n.pt' with the actual model path)
+    from ultralytics import YOLO  # Assuming YOLOv10 is supported here
+    model = YOLO('yolov10n.pt')  # Replace with the actual path to the YOLOv10 model
 
-def generate_frames():
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
+    # Video capture setup (0 for webcam)
+    cap = cv2.VideoCapture(0)
 
-        # Use the YOLO model to detect objects in the frame
-        results = model(frame)
-        
-        # Draw bounding boxes on the detected objects
-        for result in results:
-            for box, conf, cls in zip(result.boxes.xyxy, result.boxes.conf, result.boxes.cls):
-                # Extract bounding box coordinates
-                x1, y1, x2, y2 = map(int, box[:4])
-                confidence = conf.item()
-                class_id = int(cls.item())
-                class_name = model.names[class_id]
-                
-                # Draw the bounding box
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                cv2.putText(frame, f"{class_name} {confidence:.2f}", 
-                            (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+    def generate_frames():
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
 
-        # Encode the frame as a JPEG image and yield it as a byte stream
-        ret, buffer = cv2.imencode('.jpg', frame)
-        frame = buffer.tobytes()
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+            # Use the YOLO model to detect objects in the frame
+            results = model(frame)
+
+            # Draw bounding boxes on the detected objects
+            for result in results:
+                for box, conf, cls in zip(result.boxes.xyxy, result.boxes.conf, result.boxes.cls):
+                    # Extract bounding box coordinates
+                    x1, y1, x2, y2 = map(int, box[:4])
+                    confidence = conf.item()
+                    class_id = int(cls.item())
+                    class_name = model.names[class_id]
+
+                    # Draw the bounding box
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                    cv2.putText(frame, f"{class_name} {confidence:.2f}", 
+                                (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+
+            # Encode the frame as a JPEG image and yield it as a byte stream
+            ret, buffer = cv2.imencode('.jpg', frame)
+            frame = buffer.tobytes()
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+else:
+    def generate_frames():
+        # Provide a default frame or an error message if no camera is available
+        while True:
+            frame = cv2.imread('no_camera_available.jpg')  # A placeholder image
+            ret, buffer = cv2.imencode('.jpg', frame)
+            frame = buffer.tobytes()
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
 @app.route('/')
 def index():
@@ -53,5 +66,6 @@ def video_feed():
 if __name__ == '__main__':
     app.run()
 
-# Release the video capture when the application stops
-cap.release()
+# Release the video capture when the application stops, if camera is available
+if CAMERA_AVAILABLE:
+    cap.release()
