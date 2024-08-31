@@ -1,4 +1,4 @@
-from flask import Flask, render_template, Response
+from flask import Flask, render_template, Response, request, redirect, url_for
 import cv2
 import numpy as np
 from ultralytics import YOLO  # Assuming YOLOv10 is supported here
@@ -8,11 +8,11 @@ app = Flask(__name__)
 # Initialize the YOLOv10 model (replace 'yolov10n.pt' with the actual model path)
 model = YOLO('yolov10n.pt')  # Replace with the actual path to the YOLOv10 model
 
-# Set your phone's RTSP camera URL including the port 554 and the video path
-rtsp_url = 'rtsp://10.2.239.184:554/video'
-cap = cv2.VideoCapture(rtsp_url)
+cap = None  # Initialize the cap variable
+
 
 def generate_frames():
+    global cap
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -41,19 +41,41 @@ def generate_frames():
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
-@app.route('/')
+
+@app.route('/', methods=['GET', 'POST'])
 def index():
-    # Render the index.html template
-    return render_template('index.html')
+    return render_template('index.html', connected=False)
+
+
+@app.route('/connect', methods=['POST'])
+def connect():
+    global cap
+    rtsp_url = request.form['rtsp_url']
+    
+    # Release any previous capture if it exists
+    if cap is not None:
+        cap.release()
+    
+    # Initialize the video capture with the new RTSP URL
+    cap = cv2.VideoCapture(rtsp_url)
+    
+    # Check if the connection was successful
+    if not cap.isOpened():
+        return "Error: Unable to open video stream. Please check the URL and try again."
+    
+    return render_template('index.html', connected=True)
+
 
 @app.route('/video_feed')
 def video_feed():
     # Return the response generated along with the specific media type (mime type)
     return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
+
 if __name__ == '__main__':
     try:
         app.run(host='0.0.0.0', port=5001, debug=True)
     finally:
         # Release the video capture when the application stops
-        cap.release()
+        if cap is not None:
+            cap.release()
