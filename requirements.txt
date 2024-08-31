@@ -214,7 +214,6 @@ tqdm==4.66.5
 transformers==4.44.2
 typing_extensions==4.12.2
 tzdata==2024.1
-ultralytics @ git+https://github.com/THU-MIG/yolov10.git@cd2f79c70299c9041fb6d19617ef1296f47575b1
 ultralytics-thop==2.0.5
 urllib3==2.2.2
 Werkzeug==3.0.4
