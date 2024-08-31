@@ -8,8 +8,9 @@ app = Flask(__name__)
 # Initialize the YOLOv10 model (replace 'yolov10n.pt' with the actual model path)
 model = YOLO('yolov10n.pt')  # Replace with the actual path to the YOLOv10 model
 
-# Video capture setup (0 for webcam)
-cap = cv2.VideoCapture(0)
+# Set your phone's RTSP camera URL including the port 554 and the video path
+rtsp_url = 'rtsp://10.2.239.184:554/video'
+cap = cv2.VideoCapture(rtsp_url)
 
 def generate_frames():
     while True:
@@ -52,7 +53,7 @@ def video_feed():
 
 if __name__ == '__main__':
     try:
-        app.run()
+        app.run(host='0.0.0.0', port=5001, debug=True)
     finally:
         # Release the video capture when the application stops
         cap.release()
