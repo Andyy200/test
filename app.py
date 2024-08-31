@@ -2,7 +2,7 @@ from flask import Flask, render_template, Response, request, redirect, url_for
 import cv2
 import numpy as np
 from ultralytics import YOLO  # Assuming YOLOv10 is supported here
-
+import os
 app = Flask(__name__)
 
 # Initialize the YOLOv10 model (replace 'yolov10n.pt' with the actual model path)
@@ -72,9 +72,11 @@ def video_feed():
     return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
+
 if __name__ == '__main__':
     try:
-        app.run(host='0.0.0.0', port=5001, debug=True)
+        port = int(os.environ.get('PORT', 10000))
+        app.run(host='0.0.0.0', port=port, debug=True)
     finally:
         # Release the video capture when the application stops
         if cap is not None:
